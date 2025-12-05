@@ -13,15 +13,15 @@ export class InMemoryUserRepository implements IUserRepository {
       createdAt: new Date(),
     };
     this.users.push(user);
-    return user;
+    return { ...user };
   }
 
   async findById(id: string): Promise<User | null> {
-    const user = this.users.find((u) => u.id == id);
-    return user || null;
+    const user = this.users.find((u) => u.id === id);
+    return user ? { ...user } : null;
   }
 
   async findAll(): Promise<User[]> {
-    return this.users;
+    return this.users.map((user) => ({ ...user }));
   }
 }

@@ -8,9 +8,21 @@ export class SimpleScheduler implements IScheduler {
     intervalMs: number,
     fn: () => void | Promise<void>
   ): void {
-    const interval = setInterval(() => {
-      fn();
-    }, intervalMs);
+    if (this.intervals.has(name)) {
+      this.stop(name);
+      console.warn(`[Scheduler] Replacing existing recurring task "${name}"`);
+    }
+
+    const wrapped = async () => {
+      try {
+        await fn();
+      } catch (error) {
+        console.error(`[Scheduler] Error while running task "${name}"`, error);
+      }
+    };
+
+    const interval = setInterval(wrapped, intervalMs);
+    interval.unref?.();
 
     this.intervals.set(name, interval);
   }
