@@ -64,7 +64,22 @@ async function bootstrap() {
         throw new NotFoundError(`User with id ${userId} not found`);
       }
 
-      const todos = await todoService.getTodosByUser(userId);
+      const limit =
+        req.query.limit !== undefined ? Number(req.query.limit) : undefined;
+      const offset =
+        req.query.offset !== undefined ? Number(req.query.offset) : undefined;
+
+      if (
+        (limit !== undefined && Number.isNaN(limit)) ||
+        (offset !== undefined && Number.isNaN(offset))
+      ) {
+        throw new ValidationError("limit and offset must be numbers");
+      }
+
+      const todos = await todoService.getTodosByUser(userId, {
+        limit,
+        offset,
+      });
       res.json(todos);
     })
   );
@@ -74,6 +89,14 @@ async function bootstrap() {
     asyncHandler(async (req, res) => {
       const todo = await todoService.completeTodo(req.params.id);
       res.json(todo);
+    })
+  );
+
+  app.delete(
+    "/todos/:id",
+    asyncHandler(async (req, res) => {
+      await todoService.deleteTodo(req.params.id);
+      res.status(204).send();
     })
   );
 

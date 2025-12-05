@@ -15,6 +15,7 @@ export class InMemoryTodoRepository implements ITodoRepository {
     const todo: Todo = {
       ...todoData,
       remindAt: todoData.remindAt ? new Date(todoData.remindAt) : undefined,
+      deletedAt: null,
       id,
       createdAt: now,
       updatedAt: now,
@@ -52,13 +53,13 @@ export class InMemoryTodoRepository implements ITodoRepository {
   }
 
   async findById(id: string): Promise<Todo | null> {
-    const todo = this.todos.find((t) => t.id === id);
+    const todo = this.todos.find((t) => t.id === id && !t.deletedAt);
     return todo ? { ...todo } : null;
   }
 
   async findByUserId(userId: string): Promise<Todo[]> {
     return this.todos
-      .filter((t) => t.userId === userId)
+      .filter((t) => t.userId === userId && !t.deletedAt)
       .map((todo) => ({ ...todo }));
   }
 
@@ -67,6 +68,7 @@ export class InMemoryTodoRepository implements ITodoRepository {
       .filter(
         (t) =>
           t.status === "PENDING" &&
+          !t.deletedAt &&
           t.remindAt instanceof Date &&
           t.remindAt.getTime() <= currentTime.getTime()
       )

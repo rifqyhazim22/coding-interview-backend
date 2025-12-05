@@ -2,7 +2,7 @@
 
 **Candidate:** Rifqy (Vibe Coder)  
 **Date:** 2025-12-05  
-**Time Spent:** ~1.5 hours
+**Time Spent:** ~2 hours
 
 ## Main Bugs/Issues Found
 
@@ -42,6 +42,9 @@
 ## Optional Improvements Implemented
 - Scheduler safety (duplicate protection + error trapping).
 - Defensive cloning in repositories to avoid external mutation.
+- Soft delete for todos (`deletedAt`) and DELETE /todos/:id route; listing/reminders ignore deleted.
+- Pagination support on GET /todos (limit/offset query params).
+- Structured logging for reminder processing (count/duration).
 
 ## Future Improvements
 1) Swap in persistent storage (e.g., SQLite/Postgres via Prisma/Drizzle) with migrations.  
