@@ -1,9 +1,9 @@
 import express, { NextFunction, Request, Response } from "express";
-import { InMemoryUserRepository } from "../infra/InMemoryUserRepository";
-import { InMemoryTodoRepository } from "../infra/InMemoryTodoRepository";
+import { z } from "zod";
 import { SimpleScheduler } from "../infra/SimpleScheduler";
 import { TodoService } from "../core/TodoService";
 import { NotFoundError, ValidationError } from "../core/errors";
+import { createRepositories } from "./repositoryFactory";
 
 function asyncHandler(
   fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
@@ -14,25 +14,34 @@ function asyncHandler(
 }
 
 async function bootstrap() {
-  const userRepo = new InMemoryUserRepository();
-  const todoRepo = new InMemoryTodoRepository();
+  const { userRepo, todoRepo } = createRepositories(process.env.STORE_KIND);
   const scheduler = new SimpleScheduler();
   const todoService = new TodoService(todoRepo, userRepo);
 
   const app = express();
   app.use(express.json());
 
+  const createUserSchema = z.object({
+    email: z.string().trim().email(),
+    name: z.string().trim().min(1, "name is required"),
+  });
+
+  const createTodoSchema = z.object({
+    userId: z.string().trim().min(1),
+    title: z.string().trim().min(1),
+    description: z.string().trim().optional(),
+    remindAt: z.string().datetime().optional(),
+  });
+
   app.post(
     "/users",
     asyncHandler(async (req, res) => {
-      const email = typeof req.body.email === "string" ? req.body.email.trim() : "";
-      const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
+      const parsed = createUserSchema.parse(req.body);
 
-      if (!email || !name) {
-        throw new ValidationError("email and name are required");
-      }
-
-      const user = await userRepo.create({ email, name });
+      const user = await userRepo.create({
+        email: parsed.email,
+        name: parsed.name,
+      });
       res.status(201).json(user);
     })
   );
@@ -40,12 +49,8 @@ async function bootstrap() {
   app.post(
     "/todos",
     asyncHandler(async (req, res) => {
-      const todo = await todoService.createTodo({
-        userId: req.body.userId,
-        title: req.body.title,
-        description: req.body.description,
-        remindAt: req.body.remindAt ?? undefined,
-      });
+      const parsed = createTodoSchema.parse(req.body);
+      const todo = await todoService.createTodo(parsed);
       res.status(201).json(todo);
     })
   );
@@ -64,17 +69,27 @@ async function bootstrap() {
         throw new NotFoundError(`User with id ${userId} not found`);
       }
 
-      const limit =
-        req.query.limit !== undefined ? Number(req.query.limit) : undefined;
-      const offset =
-        req.query.offset !== undefined ? Number(req.query.offset) : undefined;
+      const limitSchema = z
+        .string()
+        .transform((val) => Number(val))
+        .refine((num) => !Number.isNaN(num), "limit must be a number")
+        .nonnegative()
+        .optional();
+      const offsetSchema = z
+        .string()
+        .transform((val) => Number(val))
+        .refine((num) => !Number.isNaN(num), "offset must be a number")
+        .nonnegative()
+        .optional();
 
-      if (
-        (limit !== undefined && Number.isNaN(limit)) ||
-        (offset !== undefined && Number.isNaN(offset))
-      ) {
-        throw new ValidationError("limit and offset must be numbers");
-      }
+      const limit =
+        typeof req.query.limit === "string"
+          ? limitSchema.parse(req.query.limit)
+          : undefined;
+      const offset =
+        typeof req.query.offset === "string"
+          ? offsetSchema.parse(req.query.offset)
+          : undefined;
 
       const todos = await todoService.getTodosByUser(userId, {
         limit,
@@ -108,8 +123,12 @@ async function bootstrap() {
       _next: NextFunction
     ) => {
       void _next;
-      if (err instanceof ValidationError) {
-        return res.status(400).json({ error: err.message });
+      if (err instanceof ValidationError || err instanceof z.ZodError) {
+        const message =
+          err instanceof z.ZodError
+            ? err.errors.map((e) => e.message).join(", ")
+            : err.message;
+        return res.status(400).json({ error: message });
       }
       if (err instanceof NotFoundError) {
         return res.status(404).json({ error: err.message });

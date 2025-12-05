@@ -2,7 +2,7 @@
 
 **Candidate:** Rifqy (Vibe Coder)  
 **Date:** 2025-12-05  
-**Time Spent:** ~2 hours
+**Time Spent:** ~2.5 hours
 
 ## Main Bugs/Issues Found
 
@@ -45,6 +45,8 @@
 - Soft delete for todos (`deletedAt`) and DELETE /todos/:id route; listing/reminders ignore deleted.
 - Pagination support on GET /todos (limit/offset query params).
 - Structured logging for reminder processing (count/duration).
+- Repository factory to swap implementations (memory by default, extensible to DB).
+- Input validation via zod schemas in HTTP layer.
 
 ## Future Improvements
 1) Swap in persistent storage (e.g., SQLite/Postgres via Prisma/Drizzle) with migrations.  
