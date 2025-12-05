@@ -1,6 +1,6 @@
 # Implementation Notes
 
-**Candidate:** Codex (ChatGPT)  
+**Candidate:** Rifqy  
 **Date:** 2025-12-05  
 **Time Spent:** ~1.5 hours
 
